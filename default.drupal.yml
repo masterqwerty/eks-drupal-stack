@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal-deployment
+  labels:
+    app: drupal
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drupal
+  template:
+    metadata:
+      labels:
+        app: drupal
+    spec:
+      volumes:
+      - name: web-files
+        emptyDir: {}
+      containers:
+      - name: drupal
+        image: # ECR Repository URI
+        imagePullPolicy: "Always"
+        resources:
+          limits:
+            cpu: "0.4"
+        env:
+        - name: DB_HOST
+          value: # RDS Endpoint
+        - name: DB_PASSWORD
+          value: # RDS Password
+        - name: DB_NAME
+          value: # RDS Database Name
+        - name: DB_DRIVER
+          value: mysql
+        - name: DB_USER
+          value: # RDS Username
+        - name: DRUPAL_TRUSTED_HOST_PATTERNS
+          value: # Trusted Host Patterns for Drupal
+        volumeMounts:
+        - mountPath: /var/www/html
+          name: web-files
+        ports:
+        - containerPort: 9000
+      - name: nginx
+        image: wodby/nginx:1.15-5.3.1
+        imagePullPolicy: "Always"
+        resources:
+          limits:
+            cpu: "0.4"
+        env:
+        - name: NGINX_STATIC_OPEN_FILE_CACHE
+          value: "off"
+        - name: NGINX_ERROR_LOG_LEVEL
+          value: debug
+        - name: NGINX_BACKEND_HOST
+          value: localhost
+        - name: NGINX_SERVER_ROOT
+          value: /var/www/html/web
+        - name: NGINX_VHOST_PRESET
+          value: drupal8
+        volumeMounts:
+        - name: web-files
+          mountPath: /var/www/html
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: drupal-scaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: drupal-deployment
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: drupal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: link-service
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+  selector:
+    app: drupal

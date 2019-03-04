@@ -1,0 +1,9 @@
+*
+!update.sh
+!Dockerfile
+!docker-entrypoint.sh
+!README.md
+!default.drupal.yml
+!metrics-server
+!.gitignore
+!.gitmodules

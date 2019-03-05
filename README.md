@@ -6,31 +6,14 @@
 
 You will need to deploy the following resources to deploy drupal to EKS properly. This guide will explain what specifications each of these resources need to be created with:
 
+- IAM User
 - ECR Repository
 - RDS Instance
 - S3 Bucket
-- IAM User
 - EKS Cluster
 - EC2 Worker Nodes
 - CloudFront Distribution
 - Accompanying IAM Roles and Security Groups
-
-### Preliminary
-
-First, you will need an ECR repository. This will hold the image for your site. Just create one in the ECR console, and note down the ECR repository's URI.
-
-This drupal stack works with the wodby/docker4drupal stack that uses docker-compose to deploy a fully functional drupal stack into Docker. You will need to deploy this stack as your dev environment on your machine. You can get this stack by cloning the github repo at https://github.com/wodby/docker4drupal.
-
-After you are done cloning the repo, deploy the stack using `docker-compose up -d` when in the docker4drupal directory. You will need to install the s3\_sync module so you can use the S3 bucket for your public files. Look at the README in the s3\_sync module directory to see further configuration that needs to be done.
-
-When that's all done, copy the whole html directory to the same directory where the Dockerfile of this repo is. Also copy the settings file to prod.settings.php to the directory with the Dockerfile, and change that file to contain the settings for your prod environment. Then run:
-```
-docker build -t <ECR-repository-URI> .
-```
-
-### RDS Instance and S3 Bucket
-
-These resources don't really need any special configuration. Configure the RDS Instance the way you want it for use with drupal, and then create a S3 bucket to store drupal's public files in. You will not need to make the S3 bukcet public in order to make it work with CloudFront.
 
 ### IAM User
 
@@ -47,6 +30,27 @@ You will use this user to manage the site you are deploying to EKS. You will nee
   - InitiateLayerUpload
   - PutImage
   - UploadLayerPart
+
+### ECR Repository
+
+This will hold the image for your site. Just create one in the ECR console, and note down the ECR repository's URI.
+
+This drupal stack works with the wodby/docker4drupal stack that uses docker-compose to deploy a fully functional drupal stack into Docker. You will need to deploy this stack as your dev environment on your machine. You can get this stack by cloning the github repo at https://github.com/wodby/docker4drupal.
+
+After you are done cloning the repo, deploy the stack using `docker-compose up -d` when in the docker4drupal directory. You will need to install the s3\_sync module so you can use the S3 bucket for your public files. Look at the README in the s3\_sync module directory to see further configuration that needs to be done.
+
+When that's all done, copy the whole html directory to the same directory where the Dockerfile of this repo is. Also copy the settings file to prod.settings.php to the directory with the Dockerfile, and change that file to contain the settings for your prod environment. Then run:
+```
+docker build -t <ECR-repository-URI> .
+$(aws ecr get-login --region <region> --no-include-email)
+docker push <ECR-repository-URI>
+```
+
+This is also how you will update your site. Simply make sure the changes are present in the copied html directory, and run the same commands from above. Then follow the instructions given by the `update.sh` script.
+
+### RDS Instance and S3 Bucket
+
+These resources don't really need any special configuration. Configure the RDS Instance the way you want it for use with drupal, and then create a S3 bucket to store drupal's public files in. You will not need to make the S3 bukcet public in order to make it work with CloudFront.
 
 ### EKS Cluster
 

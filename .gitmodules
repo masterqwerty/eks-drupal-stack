@@ -1,3 +1,6 @@
 [submodule "metrics-server"]
 	path = metrics-server
 	url = https://github.com/kubernetes-incubator/metrics-server
+[submodule "docker4drupal"]
+	path = docker4drupal
+	url = https://github.com/wodby/docker4drupal

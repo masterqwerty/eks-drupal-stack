@@ -1,8 +1,7 @@
-FROM wodby/drupal:8-4.11.0
+FROM wodby/drupal:8-4.12.4
 RUN mkdir /home/wodby/tmp
-USER www-data
 RUN mkdir /mnt/files/config/sync_dir
-USER wodby
+RUN chmod 775 /mnt/files/config/sync_dir
 ADD --chown=wodby:wodby ./html /home/wodby/tmp
 ADD --chown=root:root ./docker-entrypoint.sh /
 RUN chmod 755 /home/wodby/tmp/web/sites/default

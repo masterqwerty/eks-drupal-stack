@@ -7,9 +7,10 @@ chmod 644 $tmpPath/settings.php
 gotpl /etc/gotpl/settings.php.tmpl >> $tmpPath/settings.php
 chmod 444 $tmpPath/settings.php
 shopt -s dotglob
-cp -r /home/wodby/tmp/* /var/www/html/
+rm -rf /var/www/html/*
+mv /home/wodby/tmp/* /var/www/html/
 shopt -u dotglob
-chmod 777 /var/www/html/web/sites/default/files
+rmdir /home/wodby/tmp
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

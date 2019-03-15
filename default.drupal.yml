@@ -19,35 +19,35 @@ spec:
         emptyDir: {}
       containers:
       - name: drupal
-        image: # ECR Repository URI
+        image: # ECR URI 
         imagePullPolicy: "Always"
         resources:
           limits:
-            cpu: "0.4"
+            cpu: "0.15"
         env:
         - name: DB_HOST
           value: # RDS Endpoint
         - name: DB_PASSWORD
           value: # RDS Password
         - name: DB_NAME
-          value: # RDS Database Name
+          value: # RDS Name
         - name: DB_DRIVER
-          value: mysql
+          value: # Database Driver
         - name: DB_USER
           value: # RDS Username
         - name: DRUPAL_TRUSTED_HOST_PATTERNS
-          value: # Trusted Host Patterns for Drupal
+          value: # Trusted Host Patterns
         volumeMounts:
         - mountPath: /var/www/html
           name: web-files
         ports:
         - containerPort: 9000
       - name: nginx
-        image: wodby/nginx:1.15-5.3.1
+        image: wodby/nginx:1.15-5.3.3
         imagePullPolicy: "Always"
         resources:
           limits:
-            cpu: "0.4"
+            cpu: "0.15"
         env:
         - name: NGINX_STATIC_OPEN_FILE_CACHE
           value: "off"
@@ -64,7 +64,13 @@ spec:
           mountPath: /var/www/html
         ports:
         - containerPort: 80
-
+        readinessProbe:
+          initialDelaySeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 3
+          httpGet:
+            path: /index.php
+            port: 80
 ---
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
@@ -76,7 +82,7 @@ spec:
     kind: Deployment
     name: drupal-deployment
   minReplicas: 2
-  maxReplicas: 4
+  maxReplicas: 10
   targetCPUUtilizationPercentage: 80
 ---
 apiVersion: v1
@@ -85,6 +91,8 @@ metadata:
   name: drupal-service
 spec:
   type: LoadBalancer
+  selector:
+    app: drupal
   ports:
   - port: 80
     protocol: TCP

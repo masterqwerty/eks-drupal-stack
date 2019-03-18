@@ -6,11 +6,13 @@ tmpPath='/home/wodby/tmp/web/sites/default'
 chmod 644 $tmpPath/settings.php
 gotpl /etc/gotpl/settings.php.tmpl >> $tmpPath/settings.php
 chmod 444 $tmpPath/settings.php
-shopt -s dotglob
-rm -rf /var/www/html/*
-mv /home/wodby/tmp/* /var/www/html/
-shopt -u dotglob
-rmdir /home/wodby/tmp
+if [[ $(find /var/www/html) == "/var/www/html" ]]; then
+  shopt -s dotglob
+  #rm -rf /var/www/html/*
+  mv /home/wodby/tmp/* /var/www/html/
+  shopt -u dotglob
+fi
+rm -rf /home/wodby/tmp
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

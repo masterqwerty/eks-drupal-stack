@@ -1,5 +1,5 @@
 FROM wodby/drupal:8-4.12.4
-RUN ls -A | rm -rf
+RUN ls -A | xargs rm -rf
 RUN mkdir /mnt/files/config/sync_dir
 RUN chmod 775 /mnt/files/config/sync_dir
 ADD --chown=wodby:wodby ./html /tmp

@@ -25,7 +25,12 @@ Once that is done, you can go ahead and configure autoscaling rules for your aut
 
 ### Local Resources Initial Set Up
 
-You will notice that this repo has the `kubernetes-incubator/metrics-server` and `wodby/docker4drupal` repos as submodules. These will both be necessary as you start developing. First, pull all the files from those submodules by running `git submodule update --init.` The first thing you need to do is go and change the volumes for docker4drupal in the file `docker-compose.override.yml`. Replace the following code:
+You will notice that this repo has the `kubernetes-incubator/metrics-server` and `wodby/docker4drupal` repos as submodules. These will both be necessary as you start developing. First, pull all the files from those submodules by running 
+```bash
+git submodule update --init.
+```
+ 
+The first thing you need to do is go and change the volumes for docker4drupal in the file `docker-compose.override.yml`. Replace the following code:
 ```yaml
   php:
     image: wodby/drupal:$DRUPAL_TAG
@@ -56,11 +61,39 @@ with
 ```
 This will make it so the html files from your docker4drupal stack appear in the parent directory of this repo so you can use them to build your docker images.
 
-The next thing you'll need to do is make sure your `kubectl` is connected to the EKS cluster you just created. Run the command `aws eks update-kubeconfig --name=<clusterName>` to update kubernetes configuration to use the EKS cluster you created. You can make sure it's working by running `kubectl get svc`, and making sure that it shows a kubernetes service running. Then you will need to deploy the metrics-server stuff so your pod scaler works properly. Run `kubectl apply -f metrics-server/deploy/1.8+/` to apply all the necessary resources.
+The next thing you'll need to do is make sure your `kubectl` is connected to the EKS cluster you just created. Run the command 
+```bash
+aws eks update-kubeconfig --name=<clusterName>
+``` 
+to update kubernetes configuration to use the EKS cluster you created. You can make sure it's working by running 
+```bash
+kubectl get svc
+```
+and making sure that it shows a kubernetes service running. Then you will need to deploy the metrics-server stuff so your pod scaler works properly. Run 
+```bash
+kubectl apply -f metrics-server/deploy/1.8+/
+``` 
+to apply all the necessary resources.
 
-Then setup your drupal site on your docker4drupal stack. Run `docker-compose up -d` to get the containers deployed. Then access the stack via the traefik frontend (the default frontend is `drupal.docker.localhost:8000`), and install the site. By this point, the html directory should have popped into the parent directory of this repo. From there, copy the `default.settings.php` file found in `html/web/sites/default/` to the parent directory as `prod.settings.php`. This will be the settings file that will be used in your kubernetes deployment. You can adjust this file to work as the `settings.php` file for your kubernetes deployment. **Note: The database configuration, trusted host patterns, and config sync directory location are automatically put into the settings.php file when you deploy the kubernetes deployment. These values are adjusted in the yaml file.**
+Then setup your drupal site on your docker4drupal stack. Run 
+```bash
+docker-compose up -d
+``` 
+to get the containers deployed. Then access the stack via the traefik frontend (the default frontend is `drupal.docker.localhost:8000`), and install the site. By this point, the html directory should have popped into the parent directory of this repo. From there, copy the `default.settings.php` file found in `html/web/sites/default/` to the parent directory as `prod.settings.php`. This will be the settings file that will be used in your kubernetes deployment. You can adjust this file to work as the `settings.php` file for your kubernetes deployment. **Note: The database configuration, trusted host patterns, and config sync directory location are automatically put into the settings.php file when you deploy the kubernetes deployment. These values are adjusted in the yaml file.**
 
-The last thing you will need to do is build the docker image, and push it to ECR. From the parent directory, run `docker build -t <ecrUri> .`. This will build the image and save it on your local machine. If you haven't already, you will need to run `$(aws ecr get-login --no-include-email)` to access ECR. You won't need to do this everytime you build the image, since the token will last 12 hours. What this command will do is generate a docker login command with the token you need that you can use in your terminal to "login" to ECR. Then run `docker push <ecrUri>`. This will push your image up to ECR.
+The last thing you will need to do is build the docker image, and push it to ECR. From the parent directory, run 
+```bash
+docker build -t <ecrUri> .
+```
+This will build the image and save it on your local machine. If you haven't already, you will need to run 
+```bash
+$(aws ecr get-login --no-include-email)
+``` 
+to access ECR. You won't need to do this everytime you build the image, since the token will last 12 hours. What this command will do is generate a docker login command with the token you need that you can use in your terminal to "login" to ECR. Then run 
+```bash
+docker push <ecrUri>
+```
+This will push your image up to ECR.
 
 ## YAML File
 
@@ -75,8 +108,20 @@ This yaml file deploys four resources: one deployment, one horizontal pod scaler
   * **Trusted Host Patterns** Put the trusted host patterns config here in double quotations. You can put `"'.*'"` to tell drupal to allow all host patterns through. Make sure to put the list of trusted host patterns in double quotes, otherwise kubernetes won't be able to parse it correctly.
   * **Load Balancer Type** In the Load Balancer service section of the YAML file, you will notice that there are two lines commented out. If you uncomment these lines, the service will deploy an AWS Network Load Balancer instead of a Classic Load Balancer. The deployment of a Network Load Balancer is still an alpha feature of kubernetes, so use your own discretion here. Leaving the lines commented will deploy a Classic Load Balancer.
 
-After this, you are good to go. Simply run `kubectl create -f <yourFile>.yml`, and `kubectl` will deploy those resource for you. You can watch the pods with `kubectl get pods --watch`, to see when they're done deploying. It will take about two to three minutes the first time you deploy this. Also check to make sure that your load balancer is ready to accept traffic before trying to access the site. You can access the site with the load balancer's DNS name. Also note that the horizontal pod scaler will take a minute or two before it actually starts recording metrics. After that, you are all set to go!
+After this, you are good to go. Simply run 
+```bash
+kubectl create -f <yourFile>.yml
+```
+and `kubectl` will deploy those resource for you. You can watch the pods with 
+```bash
+kubectl get pods --watch
+``` 
+to see when they're done deploying. It will take about two to three minutes the first time you deploy this. Also check to make sure that your load balancer is ready to accept traffic before trying to access the site. You can access the site with the load balancer's DNS name. Also note that the horizontal pod scaler will take a minute or two before it actually starts recording metrics. After that, you are all set to go!
 
 ## Updating the docker image
 
-Most of your updates should be done in the docker4drupal stack. When you add new modules or themes, you can update your docker image to include those by building and pushing the docker image as mentioned above. You will also need to run the update script included in this repo to make kubernetes force a reload of the containers. The command is `./update.sh -c <containerBeingUpdated> -d <deploymentBeingUpdated>`. This will update an environment variable in the configuration for the container called `LAST_UPDATED`, and kubernetes will go and fetch the new docker image. It should take about 30 to 45 seconds for each of the pods to finish deploying, depending of course on how long it takes to start the container. Luckily, there is no down time, since kubernetes won't terminate the old pods until the new pods are up and running and ready to receive traffic.
+Most of your updates should be done in the docker4drupal stack. When you add new modules or themes, you can update your docker image to include those by building and pushing the docker image as mentioned above. You will also need to run the update script included in this repo to make kubernetes force a reload of the containers. The command is 
+```bash
+./update.sh -c <containerBeingUpdated> -d <deploymentBeingUpdated>
+``` 
+This will update an environment variable in the configuration for the container called `LAST_UPDATED`, and kubernetes will go and fetch the new docker image. It should take about 30 to 45 seconds for each of the pods to finish deploying, depending of course on how long it takes to start the container. Luckily, there is no down time, since kubernetes won't terminate the old pods until the new pods are up and running and ready to receive traffic.

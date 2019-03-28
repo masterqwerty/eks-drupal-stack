@@ -1,45 +1,50 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: drupal-deployment
+  name: # Name of your deployment. 
   labels:
-    app: drupal
+    app: # App name
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: drupal
+      app: # App name
   template:
     metadata:
       labels:
-        app: drupal
+        app: # App Name
     spec:
       volumes:
       - name: web-files
         emptyDir: {}
+      - name: public-files
+        hostPath:
+          path: /mnt/files/ # Put directory on the host where you would store files for this particular deployment. Becomes necessary if you put multiple sites on a single instance.
       containers:
       - name: drupal
-        image: # ECR URI 
+        image: # ECR Image URI
         imagePullPolicy: "Always"
         resources:
           limits:
-            cpu: "0.15"
+            cpu: "0.15" # This can be changed. This seemed to be a good number for vanilla drupal.
         env:
         - name: DB_HOST
           value: # RDS Endpoint
         - name: DB_PASSWORD
           value: # RDS Password
         - name: DB_NAME
-          value: # RDS Name
+          value: # RDS DB Name
         - name: DB_DRIVER
-          value: # Database Driver
+          value: # DB Driver, like mysql
         - name: DB_USER
           value: # RDS Username
         - name: DRUPAL_TRUSTED_HOST_PATTERNS
-          value: # Trusted Host Patterns
+          value: # Trusted host patterns. Put "'.*'" for all. Yes, that's two sets of quotation marks.
         volumeMounts:
         - mountPath: /var/www/html
           name: web-files
+        - mountPath: /mnt/files/public/files
+          name: public-files
         ports:
         - containerPort: 9000
       - name: nginx
@@ -62,6 +67,8 @@ spec:
         volumeMounts:
         - name: web-files
           mountPath: /var/www/html
+        - name: public-files
+          mountPath: /mnt/files/public/files
         ports:
         - containerPort: 80
         readinessProbe:
@@ -75,38 +82,39 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: drupal-scaler
+  name: # Auto Scaler Name
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: drupal-deployment
-  minReplicas: 2
+    name: # Name of deployment from above
+  minReplicas: 2 # Change these to be what you desire for min and max
   maxReplicas: 10
-  targetCPUUtilizationPercentage: 80
+  targetCPUUtilizationPercentage: 80 # Look into kubernetes documentation for more on what metrics you can use. This requires usage of the metrics-server. See README for more details.
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: drupal-service
+  name: # HTTP Service name
+  # Uncomment below if you wish to use a network load balancer instead of a classic load balancer. WARNING: This is an alpha feature of kubernetes.
+  #annotations:
+  #  service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   type: LoadBalancer
-  selector:
-    app: drupal
   ports:
   - port: 80
     protocol: TCP
     targetPort: 80
   selector:
-    app: drupal
+    app: # App Name
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: link-service
+  name: # Service name for exposing PHP
 spec:
   ports:
   - port: 9000
     targetPort: 9000
   selector:
-    app: drupal
+    app: # App Name

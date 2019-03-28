@@ -9,11 +9,13 @@ chmod 444 $tmpPath/settings.php
 shopt -s dotglob
 if [[ $(find /var/www/html) == "/var/www/html" ]]; then
   mv /tmp/* /var/www/html/
+  echo "Moved tmp"
 else
+  echo "Removed tmp"
   rm -rf /tmp/*
 fi
 shopt -u dotglob
-
+ln -s /mnt/files/public/files /var/www/html/web/sites/default/files
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

@@ -15,7 +15,7 @@ else
   rm -rf /tmp/*
 fi
 shopt -u dotglob
-ln -s /mnt/files/public/files /var/www/html/web/sites/default/files
+ln -s /mnt/files/public /var/www/html/web/sites/default/files
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

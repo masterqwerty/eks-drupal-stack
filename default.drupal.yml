@@ -18,8 +18,9 @@ spec:
       - name: web-files
         emptyDir: {}
       - name: public-files
-        hostPath:
-          path: /mnt/files/ # Put directory on the host where you would store files for this particular deployment. Becomes necessary if you put multiple sites on a single instance.
+        nfs:
+          server: # EFS DNS Name
+          path: / # Path within EFS to mount to.
       containers:
       - name: drupal
         image: # ECR Image URI

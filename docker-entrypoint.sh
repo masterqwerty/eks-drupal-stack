@@ -15,7 +15,7 @@ else
   rm -rf /tmp/*
 fi
 shopt -u dotglob
-ln -s /mnt/files/public /var/www/html/web/sites/default/files
+find /var/www/html/web/sites/default/files -type d | xargs chmod 777
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

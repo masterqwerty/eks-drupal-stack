@@ -7,7 +7,7 @@ CPULimitUsage=$(kubectl describe node $(hostname) | grep cpu | sed '$!d' | awk {
 MemoryRequestUsage=$(kubectl describe node $(hostname) | grep memory | sed '$!d' | awk {'print $3'} | sed 's/(//; s/%)//')
 MemoryLimitUsage=$(kubectl describe node $(hostname) | grep memory | sed '$!d' | awk {'print $5'} | sed 's/(//; s/%)//')
 
-aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedRequests --value $CPURequestUsage --dimensions Instance=$instanceID --region $region --unit Percent
-aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedLimit --value $CPULimitUsage --dimensions Instance=$instanceID --region $region --unit Percent
-aws cloudwatch put-metric-data --namespace EKS --metric-name K8sMemoryReservedRequests --value $MemoryRequestUsage --dimensions Instance=$instanceID --region $region --unit Percent
-aws cloudwatch put-metric-data --namespace EKS --metric-name K8sMemoryReservedLimit --value $MemoryLimitUsage --dimensions Instance=$instanceID --region $region --unit Percent
+aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedRequests --value $CPURequestUsage --dimensions InstanceId=$instanceID --region $region --unit Percent
+aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedLimit --value $CPULimitUsage --dimensions InstanceId=$instanceID --region $region --unit Percent
+aws cloudwatch put-metric-data --namespace EKS --metric-name K8sMemoryReservedRequests --value $MemoryRequestUsage --dimensions InstanceId=$instanceID --region $region --unit Percent
+aws cloudwatch put-metric-data --namespace EKS --metric-name K8sMemoryReservedLimit --value $MemoryLimitUsage --dimensions InstanceId=$instanceID --region $region --unit Percent

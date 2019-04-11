@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Amazon EKS - Node Group
 Parameters:
-  EC2InstanceRole:
+  NodeIAMRole:
     Description: The name of the IAM role to be used for your worker nodes.
     Type: String
   KeyName:
@@ -156,6 +156,7 @@ Metadata:
           - NodeInstanceType
           - NodeImageId
           - NodeVolumeSize
+          - NodeIAMRole
           - KeyName
           - BootstrapArguments
       - Label:
@@ -323,7 +324,7 @@ Resources:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
       AssociatePublicIpAddress: true
-      IamInstanceProfile: !Ref EC2InstanceRole
+      IamInstanceProfile: !Ref NodeIAMRole
       ImageId: !Ref NodeImageId
       InstanceType: !Ref NodeInstanceType
       KeyName: !Ref KeyName
@@ -344,6 +345,12 @@ Resources:
                    --stack  ${AWS::StackName} \
                    --resource NodeGroup  \
                    --region ${AWS::Region}
+          aws eks update-kubeconfig --name ${ClusterName} --region ${AWS::Region}
+          wget -O /etc/eks/metrics.sh https://raw.githubusercontent.com/masterqwerty/eks-drupal-stack/master/metrics.sh
+          chmod 755 /etc/eks/metrics.sh
+          echo "*/1 * * * * /etc/eks/metrics.sh" >> tempcron
+          crontab tempcron
+          rm tempcron
     Metadata:
       'AWS::CloudFormation::Designer':
         id: df6195a9-1b06-4fc3-a0f2-8090ff16cd19

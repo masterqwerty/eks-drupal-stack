@@ -26,7 +26,7 @@ spec:
         image: # ECR Image URI
         imagePullPolicy: "Always"
         resources:
-          limits:
+          requests:
             cpu: "0.15" # This can be changed. This seemed to be a good number for vanilla drupal.
         env:
         - name: DB_HOST
@@ -52,7 +52,7 @@ spec:
         image: wodby/nginx:1.15-5.3.3
         imagePullPolicy: "Always"
         resources:
-          limits:
+          requests:
             cpu: "0.15"
         env:
         - name: NGINX_STATIC_OPEN_FILE_CACHE

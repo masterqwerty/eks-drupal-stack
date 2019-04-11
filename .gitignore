@@ -9,3 +9,4 @@
 !.gitmodules
 !docker4drupal
 !metrics.sh
+!worker-node-template-no-iam.yml

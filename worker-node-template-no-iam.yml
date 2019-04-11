@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Amazon EKS - Node Group
 Parameters:
+  EC2InstanceRole:
+    Description: The name of the IAM role to be used for your worker nodes.
+    Type: String
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -320,7 +323,7 @@ Resources:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
       AssociatePublicIpAddress: true
-      IamInstanceProfile: william-wallace-ec2
+      IamInstanceProfile: !Ref EC2InstanceRole
       ImageId: !Ref NodeImageId
       InstanceType: !Ref NodeInstanceType
       KeyName: !Ref KeyName

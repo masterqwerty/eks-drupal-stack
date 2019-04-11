@@ -7,15 +7,15 @@ chmod 644 $tmpPath/settings.php
 gotpl /etc/gotpl/settings.php.tmpl >> $tmpPath/settings.php
 chmod 444 $tmpPath/settings.php
 shopt -s dotglob
-if [[ $(find /var/www/html) == "/var/www/html" ]]; then
+if [[ ! $(ls -A /var/www/html) ]]; then
   mv /tmp/* /var/www/html/
-  echo "Moved tmp"
+  echo "Prod environment"
+  ln -s /mnt/files/public/files /var/www/html/web/sites/default/files
 else
-  echo "Removed tmp"
+  echo "Dev environment"
   rm -rf /tmp/*
 fi
 shopt -u dotglob
-find /var/www/html/web/sites/default/files -type d | xargs chmod 777
 
 if [[ -n "${DEBUG}" ]]; then
     set -x

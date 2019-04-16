@@ -8,6 +8,14 @@ CPULimitUsage=$(kubectl describe node $(hostname) | grep cpu | sed '$!d' | awk {
 MemoryRequestUsage=$(kubectl describe node $(hostname) | grep memory | sed '$!d' | awk {'print $3'} | sed 's/(//; s/%)//')
 MemoryLimitUsage=$(kubectl describe node $(hostname) | grep memory | sed '$!d' | awk {'print $5'} | sed 's/(//; s/%)//')
 
+counter=0
+for pod in $(kubectl get pods | grep -v NAME | awk {'print $1'}); do
+  if [[ $(kubectl describe pod $pod | sed '$!d' | grep "Insufficient CPU") ]]; then
+    counter=$((counter+1))
+  fi
+done
+
+aws cloudwatch put-metric-data --namespace EKS --metric-name InsufficientCPUPods --value $counter --dimensions AutoScalingGroup=$groupName --region $region --unit Count
 aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedRequests --value $CPURequestUsage --dimensions AutoScalingGroup=$groupName --region $region --unit Percent
 aws cloudwatch put-metric-data --namespace EKS --metric-name K8sCPUReservedLimit --value $CPULimitUsage --dimensions AutoScalingGroup=$groupName --region $region --unit Percent
 aws cloudwatch put-metric-data --namespace EKS --metric-name K8sMemoryReservedRequests --value $MemoryRequestUsage --dimensions AutoScalingGroup=$groupName --region $region --unit Percent

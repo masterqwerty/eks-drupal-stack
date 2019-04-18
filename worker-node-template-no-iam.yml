@@ -1,9 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Amazon EKS - Node Group
 Parameters:
-  NodeIAMRole:
-    Description: The name of the IAM role to be used for your worker nodes.
-    Type: String
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -156,7 +153,6 @@ Metadata:
           - NodeInstanceType
           - NodeImageId
           - NodeVolumeSize
-          - NodeIAMRole
           - KeyName
           - BootstrapArguments
       - Label:
@@ -170,8 +166,8 @@ Metadata:
         width: 60
         height: 60
       position:
-        x: 60
-        'y': 90
+        x: 0
+        'y': 200
       z: 1
       embeds: []
     70c2cfe0-6887-48aa-aec6-639917f2016b:
@@ -185,8 +181,8 @@ Metadata:
         width: 60
         height: 60
       position:
-        x: 180
-        'y': 210
+        x: 0
+        'y': 100
       z: 1
       embeds: []
       isassociatedwith:
@@ -196,12 +192,52 @@ Metadata:
         width: 60
         height: 60
       position:
-        x: 300
-        'y': 90
+        x: 110
+        'y': 100
       z: 1
       embeds: []
       isassociatedwith:
         - df6195a9-1b06-4fc3-a0f2-8090ff16cd19
+    e8a564c1-a7c6-4151-990e-903497213a5d:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 200
+        'y': 150
+      z: 1
+      embeds: []
+    c4193592-8f12-481a-a840-5e322b5720d2:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 340
+        'y': 150
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - c10e07cb-f983-41c9-baec-4f7735157438
+    8a3b4f89-7c31-4b41-97b4-482606986175:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 340
+        'y': 50
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - c10e07cb-f983-41c9-baec-4f7735157438
+    17b9f53f-dfd9-4ec8-a392-b95e87c78bdb:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 200
+        'y': 50
+      z: 1
+      embeds: []
 Resources:
   NodeSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -324,7 +360,7 @@ Resources:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
       AssociatePublicIpAddress: true
-      IamInstanceProfile: !Ref NodeIAMRole
+      IamInstanceProfile: william-wallace-ec2
       ImageId: !Ref NodeImageId
       InstanceType: !Ref NodeInstanceType
       KeyName: !Ref KeyName
@@ -337,23 +373,106 @@ Resources:
             VolumeType: gp2
             DeleteOnTermination: true
       UserData:
-        'Fn::Base64': !Sub |
+        'Fn::Base64': !Sub >
           #!/bin/bash
+
           set -o xtrace
+
           /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArguments}
+
           /opt/aws/bin/cfn-signal --exit-code $? \
                    --stack  ${AWS::StackName} \
                    --resource NodeGroup  \
                    --region ${AWS::Region}
-          aws eks update-kubeconfig --name ${ClusterName} --region ${AWS::Region}
-          wget -O /etc/eks/metrics.sh https://raw.githubusercontent.com/masterqwerty/eks-drupal-stack/master/metrics.sh
+          wget -O /etc/eks/metrics.sh
+          https://raw.githubusercontent.com/masterqwerty/eks-drupal-stack/master/metrics.sh
+
           chmod 755 /etc/eks/metrics.sh
-          echo "*/1 * * * * /etc/eks/metrics.sh" >> tempcron
-          crontab tempcron
-          rm tempcron
+
+          aws eks update-kubeconfig --name ${ClusterName} --region
+          ${AWS::Region}
+
+          echo "*/1 * * * * /etc/eks/metrics.sh" > tempcronjob
+
+          crontab tempcronjob
+
+          rm tempcronjob
     Metadata:
       'AWS::CloudFormation::Designer':
         id: df6195a9-1b06-4fc3-a0f2-8090ff16cd19
+  EKSInsufficientCPU:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmName: EKSInsufficientCPU
+      AlarmDescription: >-
+        Detects when there are pods that can't reserve enough CPU on the EC2
+        instances.
+      MetricName: UnscheduledPods
+      Namespace: EKS
+      Period: 60
+      Statistic: Average
+      Threshold: 0
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref NodeScaleUp
+      Dimensions:
+        - Name: AutoScalingGroup
+          Value: !Ref NodeGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e8a564c1-a7c6-4151-990e-903497213a5d
+  EKSLowCPUReserved:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmName: EKSLowCPUReserved
+      AlarmDescription: >-
+        Detects when the amount of reserved CPU is below 50 percent averaged
+        across the worker nodes.
+      MetricName: K8sCPUReservedRequests
+      Namespace: EKS
+      Period: 300
+      Statistic: Average
+      Threshold: 50
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      ComparisonOperator: LessThanThreshold
+      AlarmActions:
+        - !Ref NodeScaleDown
+      Dimensions:
+        - Name: AutoScalingGroup
+          Value: !Ref NodeGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 17b9f53f-dfd9-4ec8-a392-b95e87c78bdb
+  NodeScaleUp:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AutoScalingGroupName: !Ref NodeGroup
+      AdjustmentType: ChangeInCapacity
+      MetricAggregationType: Average
+      PolicyType: StepScaling
+      EstimatedInstanceWarmup: 300
+      StepAdjustments:
+        - MetricIntervalLowerBound: '0'
+          ScalingAdjustment: '1'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c4193592-8f12-481a-a840-5e322b5720d2
+  NodeScaleDown:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AutoScalingGroupName: !Ref NodeGroup
+      AdjustmentType: ChangeInCapacity
+      MetricAggregationType: Average
+      PolicyType: StepScaling
+      StepAdjustments:
+        - MetricIntervalUpperBound: '0'
+          ScalingAdjustment: '-1'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 8a3b4f89-7c31-4b41-97b4-482606986175
 Outputs:
   NodeSecurityGroup:
     Description: The security group for the node group

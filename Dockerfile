@@ -1,4 +1,4 @@
-FROM wodby/drupal:8-4.12.4
+FROM wodby/drupal:8-4.12.15
 RUN ls -A /var/www/html | xargs rm -rf
 RUN mkdir /mnt/files/config/sync_dir
 RUN chmod 775 /mnt/files/config/sync_dir
